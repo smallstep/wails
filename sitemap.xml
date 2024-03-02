@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    <url>
+        <loc>https://v3alpha.wails.io/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/changelog/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/changelog/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/roadmap/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/roadmap/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/whats-new/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/whats-new/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/application/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/application/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/fullapi/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/fullapi/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/mainthread/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/mainthread/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/menu/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/menu/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/systray/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/systray/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/API/window/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/API/window/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/development/changes/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/development/changes/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/development/introduction/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/development/introduction/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/development/status/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/development/status/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/getting-started/feedback/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/getting-started/feedback/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/getting-started/installation/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/getting-started/installation/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/getting-started/next-steps/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/getting-started/next-steps/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/getting-started/your-first-app/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/getting-started/your-first-app/"/>
+    </url>
+    <url>
+        <loc>https://v3alpha.wails.io/learn/runtime/</loc>
+        <lastmod>2024-03-02</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://v3alpha.wails.io/learn/runtime/"/>
+    </url>
+</urlset>
