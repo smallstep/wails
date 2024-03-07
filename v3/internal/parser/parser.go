@@ -381,7 +381,7 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 			pkgInfo := p.packageCache[pkg]
 			relativePackageDir := p.RelativeBindingsDir(pkgInfo, pkgInfo)
 			// Write the directory
-			err = os.WriteFile(filepath.Join(options.OutputDirectory, relativePackageDir, options.ModelsFilename), []byte(text), 0644)
+			err = os.WriteFile(filepath.Join(options.OutputDirectory, relativePackageDir, pkg, options.ModelsFilename), []byte(text), 0644)
 		}
 		if err != nil {
 			return p, err
