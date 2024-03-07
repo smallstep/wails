@@ -296,11 +296,14 @@ func (p *Project) GenerateBindingTypescript(thisStructName string, method *Bound
 
 	// outputs
 	var returns string
-	if len(method.Outputs) == 0 {
+	switch {
+	case len(method.Outputs) == 0:
 		returns = "Promise<void>"
-	} else {
+	case len(method.Outputs) == 1 && method.Outputs[0].Type.Name == "error":
+		returns = "Promise<void>"
+	default:
 		returns = "Promise<"
-		for _, output := range method.Outputs {
+		for idx, output := range method.Outputs {
 			output.project = p
 			pkgName := getPackageName(output)
 			if pkgName != "" {
@@ -308,6 +311,10 @@ func (p *Project) GenerateBindingTypescript(thisStructName string, method *Bound
 			}
 			jsType := output.JSType(pkgName)
 			if jsType == "error" {
+				if len(method.Outputs) == 2 && idx == 1 {
+					continue
+				}
+
 				jsType = "void"
 			}
 			if output.Type.IsStruct {
@@ -320,9 +327,9 @@ func (p *Project) GenerateBindingTypescript(thisStructName string, method *Bound
 				}
 				jsType = output.NamespacedStructVariable(output.Type.Package)
 			}
-			returns += jsType + ", "
+			returns += jsType + "|"
 		}
-		returns = strings.TrimSuffix(returns, ", ")
+		returns = strings.TrimSuffix(returns, "|")
 		returns += ">"
 	}
 	result = strings.ReplaceAll(result, "{{ReturnType}}", returns)
