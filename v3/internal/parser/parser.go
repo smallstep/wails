@@ -792,19 +792,24 @@ func (p *Project) getStructDef(name string, pkg *ParsedPackage) bool {
 func (p *Project) parseStructFields(structType *ast.StructType, pkg *ParsedPackage) []*Field {
 	var result []*Field
 	for _, field := range structType.Fields.List {
-		tag, err := strconv.Unquote(field.Tag.Value)
-		if err != nil {
-			continue
-		}
+		var jsonName string
+		if field.Tag != nil {
+			tag, err := strconv.Unquote(field.Tag.Value)
+			if err != nil {
+				continue
+			}
 
-		tags, err := structtag.Parse(tag)
-		if err != nil {
-			continue
-		}
+			tags, err := structtag.Parse(tag)
+			if err != nil {
+				continue
+			}
 
-		jsonTag, err := tags.Get("json")
-		if err != nil {
-			continue
+			jsonTag, err := tags.Get("json")
+			if err != nil {
+				continue
+			}
+
+			jsonName = jsonTag.Name
 		}
 
 		var theseFields []*Field
@@ -813,7 +818,7 @@ func (p *Project) parseStructFields(structType *ast.StructType, pkg *ParsedPacka
 				theseFields = append(theseFields, &Field{
 					Project:  p,
 					Name:     name.Name,
-					JSONName: jsonTag.Name,
+					JSONName: jsonName,
 				})
 			}
 		} else {
