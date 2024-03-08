@@ -8,6 +8,7 @@ require (
 	github.com/atterpac/refresh v0.5.11
 	github.com/bep/debounce v1.2.1
 	github.com/ebitengine/purego v0.4.0-alpha.4
+	github.com/fatih/structtag v1.2.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/go-ole/go-ole v1.2.6
 	github.com/go-task/task/v3 v3.31.0

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/fatih/structtag"
 	"github.com/wailsapp/wails/v3/internal/hash"
 )
 
@@ -143,13 +144,14 @@ func (m BoundMethod) IDAsString() string {
 }
 
 type Field struct {
-	Name    string
-	Type    *ParameterType
-	Project *Project
+	Name     string
+	JSONName string
+	Type     *ParameterType
+	Project  *Project
 }
 
 func (f *Field) JSName() string {
-	return strings.ToLower(f.Name[0:1]) + f.Name[1:]
+	return f.JSONName
 }
 
 // TSBuild contains the typescript to build a field for a JS object
@@ -790,12 +792,28 @@ func (p *Project) getStructDef(name string, pkg *ParsedPackage) bool {
 func (p *Project) parseStructFields(structType *ast.StructType, pkg *ParsedPackage) []*Field {
 	var result []*Field
 	for _, field := range structType.Fields.List {
+		tag, err := strconv.Unquote(field.Tag.Value)
+		if err != nil {
+			continue
+		}
+
+		tags, err := structtag.Parse(tag)
+		if err != nil {
+			continue
+		}
+
+		jsonTag, err := tags.Get("json")
+		if err != nil {
+			continue
+		}
+
 		var theseFields []*Field
 		if len(field.Names) > 0 {
 			for _, name := range field.Names {
 				theseFields = append(theseFields, &Field{
-					Project: p,
-					Name:    name.Name,
+					Project:  p,
+					Name:     name.Name,
+					JSONName: jsonTag.Name,
 				})
 			}
 		} else {
