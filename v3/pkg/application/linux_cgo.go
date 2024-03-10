@@ -1100,6 +1100,10 @@ func (w *linuxWebviewWindow) setAlwaysOnTop(alwaysOnTop bool) {
 	C.gtk_window_set_keep_above(w.gtkWindow(), gtkBool(alwaysOnTop))
 }
 
+func (w *linuxWebviewWindow) flash(_ bool) {
+	// Not supported on Linux
+}
+
 func (w *linuxWebviewWindow) setTitle(title string) {
 	if !w.parent.options.Frameless {
 		cTitle := C.CString(title)
@@ -1348,15 +1352,13 @@ func onDragNDrop(target unsafe.Pointer, context *C.GdkDragContext, x C.gint, y C
 //export onKeyPressEvent
 func onKeyPressEvent(widget *C.GtkWidget, event *C.GdkEventKey, userData C.uintptr_t) C.gboolean {
 	windowID := uint(C.uint(userData))
-	accelerator, ok := getKeyboardState(event)
-	if !ok {
-		return C.gboolean(1)
+	if accelerator, ok := getKeyboardState(event); ok {
+		windowKeyEvents <- &windowKeyEvent{
+			windowId:          windowID,
+			acceleratorString: accelerator,
+		}
 	}
-	windowKeyEvents <- &windowKeyEvent{
-		windowId:          windowID,
-		acceleratorString: accelerator,
-	}
-	return C.gboolean(1)
+	return C.gboolean(0)
 }
 
 func getKeyboardState(event *C.GdkEventKey) (string, bool) {

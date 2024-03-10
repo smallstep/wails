@@ -5,6 +5,7 @@ package application
 import "C"
 import (
 	"fmt"
+
 	"github.com/wailsapp/wails/v3/internal/assetserver"
 	"github.com/wailsapp/wails/v3/internal/capabilities"
 	"github.com/wailsapp/wails/v3/internal/runtime"
@@ -33,14 +34,6 @@ type linuxWebviewWindow struct {
 	drag         dragInfo
 	lastX, lastY int
 	gtkmenu      pointer
-}
-
-func (w *linuxWebviewWindow) setMinimiseButtonEnabled(enabled bool) {
-	// Not available in Linux
-}
-
-func (w *linuxWebviewWindow) setMaximiseButtonEnabled(enabled bool) {
-	// Not available in Linux
 }
 
 var (
@@ -82,8 +75,20 @@ func (w *linuxWebviewWindow) isNormal() bool {
 	return !w.isMinimised() && !w.isMaximised() && !w.isFullscreen()
 }
 
+func (w *linuxWebviewWindow) setCloseButtonEnabled(enabled bool) {
+	//	C.enableCloseButton(w.nsWindow, C.bool(enabled))
+}
+
 func (w *linuxWebviewWindow) setFullscreenButtonEnabled(enabled bool) {
 	// Not implemented
+}
+
+func (w *linuxWebviewWindow) setMinimiseButtonEnabled(enabled bool) {
+	//C.enableMinimiseButton(w.nsWindow, C.bool(enabled))
+}
+
+func (w *linuxWebviewWindow) setMaximiseButtonEnabled(enabled bool) {
+	//C.enableMaximiseButton(w.nsWindow, C.bool(enabled))
 }
 
 func (w *linuxWebviewWindow) disableSizeConstraints() {

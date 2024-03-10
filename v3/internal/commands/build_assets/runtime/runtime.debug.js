@@ -45,7 +45,8 @@
     Window: 6,
     Screens: 7,
     System: 8,
-    Browser: 9
+    Browser: 9,
+    CancelCall: 10
   };
   var clientId = nanoid();
   function newRuntimeCallerWithID(object, windowName) {
@@ -1017,6 +1018,7 @@
   window._wails.callErrorHandler = errorHandler;
   var CallBinding = 0;
   var call9 = newRuntimeCallerWithID(objectNames.Call, "");
+  var cancelCall = newRuntimeCallerWithID(objectNames.CancelCall, "");
   var callResponses = /* @__PURE__ */ new Map();
   function generateID2() {
     let result;
@@ -1043,15 +1045,32 @@
     return response;
   }
   function callBinding(type, options = {}) {
-    return new Promise((resolve, reject) => {
-      const id = generateID2();
+    const id = generateID2();
+    const doCancel = () => {
+      cancelCall(type, { "call-id": id });
+    };
+    var queuedCancel = false, callRunning = false;
+    var p = new Promise((resolve, reject) => {
       options["call-id"] = id;
       callResponses.set(id, { resolve, reject });
-      call9(type, options).catch((error) => {
+      call9(type, options).then((_) => {
+        callRunning = true;
+        if (queuedCancel) {
+          doCancel();
+        }
+      }).catch((error) => {
         reject(error);
         callResponses.delete(id);
       });
     });
+    p.cancel = () => {
+      if (callRunning) {
+        doCancel();
+      } else {
+        queuedCancel = true;
+      }
+    };
+    return p;
   }
   function Call(options) {
     return callBinding(CallBinding, options);

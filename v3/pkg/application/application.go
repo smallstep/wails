@@ -3,9 +3,6 @@ package application
 import (
 	"embed"
 	"encoding/json"
-	"github.com/pkg/browser"
-	"github.com/samber/lo"
-	"github.com/wailsapp/wails/v3/internal/signal"
 	"io"
 	"log"
 	"log/slog"
@@ -14,6 +11,10 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+
+	"github.com/pkg/browser"
+	"github.com/samber/lo"
+	"github.com/wailsapp/wails/v3/internal/signal"
 
 	"github.com/wailsapp/wails/v3/internal/assetserver"
 	"github.com/wailsapp/wails/v3/internal/assetserver/webview"
@@ -29,7 +30,7 @@ var globalApplication *App
 
 // AlphaAssets is the default assets for the alpha application
 var AlphaAssets = AssetOptions{
-	FS: alphaAssets,
+	Handler: AssetFileServerFS(alphaAssets),
 }
 
 func init() {
@@ -75,23 +76,38 @@ func New(appOptions Options) *App {
 
 	result.Events = NewWailsEventProcessor(result.dispatchEventToWindows)
 
+	messageProc := NewMessageProcessor(result.Logger)
 	opts := &assetserver.Options{
-		Assets:         appOptions.Assets.FS,
-		Handler:        appOptions.Assets.Handler,
-		Middleware:     assetserver.Middleware(appOptions.Assets.Middleware),
-		Logger:         result.Logger,
-		RuntimeHandler: NewMessageProcessor(result.Logger),
-		GetCapabilities: func() []byte {
-			return globalApplication.capabilities.AsBytes()
-		},
-		GetFlags: func() []byte {
-			updatedOptions := result.impl.GetFlags(appOptions)
-			flags, err := json.Marshal(updatedOptions)
-			if err != nil {
-				log.Fatal("Invalid flags provided to application: ", err.Error())
-			}
-			return flags
-		},
+		Handler: appOptions.Assets.Handler,
+		Middleware: assetserver.ChainMiddleware(
+			func(next http.Handler) http.Handler {
+				if m := appOptions.Assets.Middleware; m != nil {
+					return m(next)
+				}
+				return next
+			},
+			func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+					path := req.URL.Path
+					switch path {
+					case "/wails/runtime":
+						messageProc.ServeHTTP(rw, req)
+					case "/wails/capabilities":
+						assetserver.ServeFile(rw, path, globalApplication.capabilities.AsBytes())
+					case "/wails/flags":
+						updatedOptions := result.impl.GetFlags(appOptions)
+						flags, err := json.Marshal(updatedOptions)
+						if err != nil {
+							log.Fatal("Invalid flags provided to application: ", err.Error())
+						}
+						assetserver.ServeFile(rw, path, flags)
+					default:
+						next.ServeHTTP(rw, req)
+					}
+				})
+			},
+		),
+		Logger: result.Logger,
 	}
 
 	if appOptions.Assets.DisableLogging {

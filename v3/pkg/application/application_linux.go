@@ -59,7 +59,6 @@ func (a *linuxApp) on(eventID uint) {
 }
 
 func (a *linuxApp) setIcon(icon []byte) {
-
 	log.Println("linuxApp.setIcon", "not implemented")
 }
 

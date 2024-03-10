@@ -67,6 +67,7 @@ type Window interface {
 	Size() (width int, height int)
 	OpenDevTools()
 	ToggleFullscreen()
+	ToggleMaximise()
 	UnFullscreen()
 	UnMaximise()
 	UnMinimise()
