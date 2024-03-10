@@ -1100,10 +1100,6 @@ func (w *linuxWebviewWindow) setAlwaysOnTop(alwaysOnTop bool) {
 	C.gtk_window_set_keep_above(w.gtkWindow(), gtkBool(alwaysOnTop))
 }
 
-func (w *linuxWebviewWindow) flash(_ bool) {
-	// Not supported on Linux
-}
-
 func (w *linuxWebviewWindow) setTitle(title string) {
 	if !w.parent.options.Frameless {
 		cTitle := C.CString(title)
