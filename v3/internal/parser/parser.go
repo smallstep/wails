@@ -192,6 +192,14 @@ func (f *Field) JSDef(pkg string) string {
 		jsType = f.Type.Name
 	}
 
+	if f.Type.IsSlice {
+		jsType += "[]"
+	}
+
+	if f.Type.IsPointer {
+		jsType += " | null"
+	}
+
 	var result string
 	isExternalStruct := f.Type.Package != "" && f.Type.Package != pkg && f.Type.IsStruct
 	if f.Type.Package == "" || f.Type.Package == pkg || !isExternalStruct {
