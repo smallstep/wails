@@ -1134,7 +1134,7 @@ func (w *macosWebviewWindow) run() {
 			w.setMaximiseButtonEnabled(false)
 		}
 		if macOptions.DisableCloseButton {
-			C.enableCloseButton(w.nsWindow, false)
+			w.setCloseButtonEnabled(false)
 		}
 
 		if options.IgnoreMouseEvents {
