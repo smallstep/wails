@@ -1160,7 +1160,7 @@ func (p *Project) RelativePackageDir(path string) string {
 
 	result := filepath.ToSlash(strings.TrimPrefix(pkgInfo.Dir, p.Path))
 	if result == "" {
-		return "main"
+		return pkgInfo.Name
 	}
 	// Remove the leading slash
 	if result[0] == '/' || result[0] == '\\' {
