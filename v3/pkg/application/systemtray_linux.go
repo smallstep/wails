@@ -715,6 +715,9 @@ func (s *linuxSystemTray) Scroll(delta int32, orientation string) (err *dbus.Err
 
 // SecondaryActivate implements org.kde.StatusNotifierItem.SecondaryActivate method.
 func (s *linuxSystemTray) SecondaryActivate(x int32, y int32) (err *dbus.Error) {
+	if s.parent.attachedWindow.Window != nil {
+		s.parent.attachedWindow.Window.Show()
+	}
 	fmt.Println("SecondaryActivate", x, y)
 	return
 }
