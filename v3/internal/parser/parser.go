@@ -17,8 +17,8 @@ import (
 
 	"github.com/wailsapp/wails/v3/internal/flags"
 
-	"github.com/samber/lo"
 	"github.com/fatih/structtag"
+	"github.com/samber/lo"
 	"github.com/wailsapp/wails/v3/internal/hash"
 )
 
@@ -367,10 +367,11 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 			p.Stats.NumMethods += len(boundMethods)
 		}
 	}
-	generatedMethods := p.GenerateBindings(p.BoundMethods, options.UseIDs, options.TS)
+	generatedMethods := p.GenerateBindings(p.BoundMethods, options)
 	for pkg, structs := range generatedMethods {
+		outputDir := filepath.Join(options.OutputDirectory, pkg)
 		// Write the directory
-		err = os.MkdirAll(filepath.Join(options.OutputDirectory, pkg), 0755)
+		err = os.MkdirAll(outputDir, 0o755)
 		if err != nil && !os.IsExist(err) {
 			return p, err
 		}
@@ -381,7 +382,7 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 			if options.TS {
 				filename = structName + ".ts"
 			}
-			err = os.WriteFile(filepath.Join(options.OutputDirectory, pkg, filename), []byte(text), 0644)
+			err = os.WriteFile(filepath.Join(outputDir, filename), []byte(text), 0o644)
 			if err != nil {
 				return p, err
 			}
@@ -823,12 +824,15 @@ func (p *Project) parseStructFields(structType *ast.StructType, pkg *ParsedPacka
 				continue
 			}
 
+			tstypeTag, _ := tags.Get("tstype")
 			jsonTag, err := tags.Get("json")
-			if err != nil {
+			if tstypeTag == nil && err != nil {
 				continue
 			}
 
-			jsonName = jsonTag.Name
+			if jsonTag != nil {
+				jsonName = jsonTag.Name
+			}
 		}
 
 		var theseFields []*Field
@@ -849,7 +853,7 @@ func (p *Project) parseStructFields(structType *ast.StructType, pkg *ParsedPacka
 		// loop over fields
 		for _, thisField := range theseFields {
 			paramType := p.parseParameterType(field, pkg)
-			if paramType.IsStruct {
+			if paramType.IsPointer || paramType.IsStruct {
 				_, ok := pkg.StructCache[paramType.Name]
 				if !ok {
 					p.getStructDef(paramType.Name, pkg)
@@ -931,7 +935,6 @@ func (p *Project) anonymousStructID() string {
 }
 
 func (p *Project) parseBoundExpression(elt ast.Expr, pkg *ParsedPackage) (bool, bool) {
-
 	switch t := elt.(type) {
 	case *ast.UnaryExpr:
 		return p.parseBoundUnaryExpression(t, pkg)
@@ -1233,6 +1236,7 @@ type ImportDef struct {
 	Path        string
 	VarName     string
 	PackageName string
+	Package     *ParsedPackage
 }
 
 func (p *Project) calculateImports(pkg string, m map[structName]*StructDef) []*ImportDef {
@@ -1244,6 +1248,7 @@ func (p *Project) calculateImports(pkg string, m map[structName]*StructDef) []*I
 				fieldPkgInfo := p.packageCache[field.Type.Package]
 				relativePath := p.RelativeBindingsDir(p.packageCache[pkg], fieldPkgInfo)
 				result = append(result, &ImportDef{
+					Package:     fieldPkgInfo,
 					PackageName: fieldPkgInfo.Name,
 					Name:        field.Name,
 					Path:        relativePath,

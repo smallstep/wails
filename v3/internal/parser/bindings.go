@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
+	"github.com/wailsapp/wails/v3/internal/flags"
 )
 
 const header = `// @ts-check
@@ -352,7 +353,7 @@ func isContext(input *Parameter) bool {
 	return input.Type.Package == "context" && input.Type.Name == "Context"
 }
 
-func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod, useIDs bool, useTypescript bool) map[string]map[string]string {
+func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod, options *flags.GenerateBindingsOptions) map[string]map[string]string {
 
 	var result = make(map[string]map[string]string)
 
@@ -364,7 +365,14 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 
 		packageBindings := bindings[packageName]
 		structNames := lo.Keys(packageBindings)
-		relativePackageDir := p.RelativePackageDir(packageName)
+		var relativePackageDir string
+		if options.UseTygo {
+			pkgInfo := p.packageCache[packageName]
+			relativePackageDir = pkgInfo.Name
+		} else {
+			relativePackageDir = p.RelativePackageDir(packageName)
+		}
+
 		_ = relativePackageDir
 		sort.Strings(structNames)
 		for _, structName := range structNames {
@@ -384,10 +392,10 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 				mainImports = "import {Call} from '@wailsio/runtime';\n"
 			}
 			for _, method := range methods {
-				if useTypescript {
-					thisBinding, models, namespacedStructs = p.GenerateBindingTypescript(structName, method, useIDs)
+				if options.TS {
+					thisBinding, models, namespacedStructs = p.GenerateBindingTypescript(structName, method, options.UseIDs)
 				} else {
-					thisBinding, models, namespacedStructs = p.GenerateBinding(structName, method, useIDs)
+					thisBinding, models, namespacedStructs = p.GenerateBinding(structName, method, options.UseIDs)
 				}
 				// Merge the namespaced structs
 				allNamespacedStructs = mergeNamespacedStructs(allNamespacedStructs, namespacedStructs)
@@ -397,7 +405,7 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 
 			if len(allNamespacedStructs) > 0 {
 				thisPkg := p.packageCache[packageName]
-				if !useTypescript {
+				if !options.TS {
 					typedefs := "/**\n"
 					for externalPackageName, namespacedStruct := range allNamespacedStructs {
 						pkgInfo := p.packageCache[externalPackageName]
@@ -422,21 +430,35 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 					imports := ""
 					for externalPackageName, namespacedStruct := range allNamespacedStructs {
 						pkgInfo := p.packageCache[externalPackageName]
-						relativePackageDir := p.RelativeBindingsDir(thisPkg, pkgInfo)
-						namePrefix := ""
-						if pkgInfo.Name != "" && pkgInfo.Path != thisPkg.Path {
-							namePrefix = pkgInfo.Name
-						}
-
-						// Get keys from namespacedStruct and iterate over them in sorted order
-						namespacedStructNames := lo.Keys(namespacedStruct)
-						sort.Strings(namespacedStructNames)
-						for _, thisStructName := range namespacedStructNames {
-							structInfo := namespacedStruct[thisStructName]
-							if namePrefix != "" {
-								imports += "import {" + thisStructName + " as " + namePrefix + structInfo.Name + "} from '" + relativePackageDir + "/models';\n"
+						if options.UseTygo {
+							var packageName string
+							if strings.HasPrefix(pkgInfo.Dir, p.Path) {
+								packageName = pkgInfo.Name
 							} else {
-								imports += "import {" + thisStructName + "} from '" + relativePackageDir + "/models';\n"
+								packageName = externalPackageName
+							}
+							namespacedStructNames := lo.Keys(namespacedStruct)
+							sort.Strings(namespacedStructNames)
+							for _, thisStructName := range namespacedStructNames {
+								imports += fmt.Sprintf("import {%s} from '../%s/models.ts';\n", thisStructName, packageName)
+							}
+						} else {
+							relativePackageDir := p.RelativeBindingsDir(thisPkg, pkgInfo)
+							namePrefix := ""
+							if pkgInfo.Name != "" && pkgInfo.Path != thisPkg.Path {
+								namePrefix = pkgInfo.Name
+							}
+
+							// Get keys from namespacedStruct and iterate over them in sorted order
+							namespacedStructNames := lo.Keys(namespacedStruct)
+							sort.Strings(namespacedStructNames)
+							for _, thisStructName := range namespacedStructNames {
+								structInfo := namespacedStruct[thisStructName]
+								if namePrefix != "" {
+									imports += "import {" + thisStructName + " as " + namePrefix + structInfo.Name + "} from '" + relativePackageDir + "/models';\n"
+								} else {
+									imports += "import {" + thisStructName + "} from '" + relativePackageDir + "/models';\n"
+								}
 							}
 						}
 					}
@@ -444,7 +466,7 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 					result[relativePackageDir][structName] = imports + result[relativePackageDir][structName]
 				}
 			}
-			if useTypescript {
+			if options.TS {
 				result[relativePackageDir][structName] = headerTypescript + mainImports + result[relativePackageDir][structName]
 			} else {
 				result[relativePackageDir][structName] = header + mainImports + result[relativePackageDir][structName]

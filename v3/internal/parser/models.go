@@ -3,11 +3,17 @@ package parser
 import (
 	"bytes"
 	"embed"
-	"github.com/wailsapp/wails/v3/internal/flags"
+	"fmt"
 	"io"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/gzuidhof/tygo/tygo"
+	"github.com/wailsapp/wails/v3/internal/flags"
+	"golang.org/x/exp/maps"
 )
 
 //go:embed templates
@@ -72,10 +78,14 @@ func (p *Project) GenerateModels(models map[packagePath]map[structName]*StructDe
 	// and then sort resulting list by the alias
 	var keys []string
 	for pkg := range models {
-		keys = append(keys, pkg)
+		if !slices.Contains(keys, pkg) {
+			keys = append(keys, pkg)
+		}
 	}
 	for pkg := range enums {
-		keys = append(keys, pkg)
+		if !slices.Contains(keys, pkg) {
+			keys = append(keys, pkg)
+		}
 	}
 
 	sort.Slice(keys, func(i, j int) bool {
@@ -83,21 +93,66 @@ func (p *Project) GenerateModels(models map[packagePath]map[structName]*StructDe
 	})
 
 	for _, pkg := range keys {
-		var buffer bytes.Buffer
-		buffer.WriteString(modelsHeader)
-		err := p.GenerateModel(&buffer, &ModelDefinitions{
-			Imports: p.calculateImports(pkg, models[pkg]),
-			Package: pkgAlias(pkg),
-			Models:  models[pkg],
-			Enums:   enums[pkg],
-		}, options)
-		if err != nil {
-			return nil, err
-		}
+		if options.UseTygo {
+			var outputDir string
+			path := pkg
+			pkgInfo := p.packageCache[pkg]
+			modelImports := p.calculateImports(pkg, models[pkg])
+			imports := make(map[string]string)
+			for _, i := range modelImports {
+				var importPath string
+				if strings.HasPrefix(pkgInfo.Dir, p.Path) {
+					importPath = filepath.Join("..", i.Package.Path)
+				} else {
+					importPathParts := []string{}
+					for _, _ = range strings.Split(filepath.ToSlash(pkgInfo.Path), "/") {
+						importPathParts = append(importPathParts, "..")
+					}
 
-		// Get the relative package path
-		relativePackageDir := p.RelativePackageDir(pkg)
-		result[relativePackageDir] = buffer.String()
+					importPathParts = append(importPathParts, strings.Split(filepath.ToSlash(i.Package.Path), "/")...)
+					importPath = filepath.Join(importPathParts...)
+				}
+
+				imports[i.PackageName] = fmt.Sprintf("import * as %s from '%s';", i.PackageName, filepath.Join(importPath, "models.ts"))
+			}
+
+			if strings.HasPrefix(pkgInfo.Dir, p.Path) {
+				outputDir = filepath.Join(options.OutputDirectory, pkgInfo.Name)
+			} else {
+				outputDir = filepath.Join(options.OutputDirectory, pkg)
+			}
+
+			cfg := &tygo.Config{
+				Packages: []*tygo.PackageConfig{
+					{
+						Frontmatter:  strings.Join(maps.Values(imports), "\n"),
+						Path:         path,
+						OutputPath:   filepath.Join(outputDir, "models.ts"),
+						FallbackType: "any",
+					},
+				},
+			}
+			gen := tygo.New(cfg)
+			err := gen.Generate()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			var buffer bytes.Buffer
+			buffer.WriteString(modelsHeader)
+			err := p.GenerateModel(&buffer, &ModelDefinitions{
+				Imports: p.calculateImports(pkg, models[pkg]),
+				Package: pkgAlias(pkg),
+				Models:  models[pkg],
+				Enums:   enums[pkg],
+			}, options)
+			if err != nil {
+				return nil, err
+			}
+
+			relativePackageDir := p.RelativePackageDir(pkg)
+			result[relativePackageDir] = buffer.String()
+		}
 	}
 	return result, nil
 }
