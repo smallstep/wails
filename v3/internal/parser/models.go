@@ -122,6 +122,16 @@ func (p *Project) GenerateModels(models map[packagePath]map[structName]*StructDe
 				outputDir = filepath.Join(options.OutputDirectory, pkg)
 			}
 
+			mappings := make(map[string]string)
+			if options.TygoMappings != "" {
+				for _, pair := range strings.Split(options.TygoMappings, ",") {
+					if strings.Contains(pair, ":") {
+						mapping := strings.Split(strings.TrimSpace(pair), ":")
+						mappings[mapping[0]] = mapping[1]
+					}
+				}
+			}
+
 			cfg := &tygo.Config{
 				Packages: []*tygo.PackageConfig{
 					{
@@ -129,6 +139,7 @@ func (p *Project) GenerateModels(models map[packagePath]map[structName]*StructDe
 						Path:         path,
 						OutputPath:   filepath.Join(outputDir, "models.ts"),
 						FallbackType: "any",
+						TypeMappings: mappings,
 					},
 				},
 			}

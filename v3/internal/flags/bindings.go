@@ -5,6 +5,7 @@ type GenerateBindingsOptions struct {
 	ModelsFilename   string `name:"m" description:"The filename for the models file" default:"models.ts"`
 	TS               bool   `name:"ts" description:"Generate Typescript bindings"`
 	UseTygo          bool   `name:"tygo" description:"Use tygo to generate Typescript models"`
+	TygoMappings     string `name:"tygo-mappings" description:"Custom mappings to use for tygo-generate Typescript models"`
 	TSPrefix         string `description:"The prefix for the typescript names" default:""`
 	TSSuffix         string `description:"The postfix for the typescript names" default:""`
 	UseInterfaces    bool   `name:"i" description:"Use interfaces instead of classes"`
