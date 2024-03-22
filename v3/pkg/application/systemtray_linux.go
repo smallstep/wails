@@ -353,6 +353,12 @@ func (s *linuxSystemTray) run() {
 				if sig == nil {
 					return // We get a nil signal when closing the window.
 				}
+
+				// ignore notification signals
+				if sig.Path == "/org/freedesktop/Notifications" {
+					return
+				}
+
 				// sig.Body has the args, which are [name old_owner new_owner]
 				if sig.Body[2] != "" {
 					s.register()
