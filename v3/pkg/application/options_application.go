@@ -69,6 +69,8 @@ type Options struct {
 	// If the function returns true, the application will quit.
 	// If the function returns false, the application will not quit.
 	ShouldQuit func() bool
+
+	MessageSerializer Serializer
 }
 
 // AssetOptions defines the configuration of the AssetServer.

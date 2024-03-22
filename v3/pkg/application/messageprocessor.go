@@ -28,6 +28,7 @@ const (
 )
 
 type MessageProcessor struct {
+	serializer    func(v any) ([]byte, error)
 	pluginManager *PluginManager
 	logger        *slog.Logger
 
@@ -35,8 +36,15 @@ type MessageProcessor struct {
 	l            sync.Mutex
 }
 
-func NewMessageProcessor(logger *slog.Logger) *MessageProcessor {
+type Serializer func(v any) ([]byte, error)
+
+func DefaultSerializer() Serializer {
+	return json.Marshal
+}
+
+func NewMessageProcessor(logger *slog.Logger, ser Serializer) *MessageProcessor {
 	return &MessageProcessor{
+		serializer:   ser,
 		logger:       logger,
 		runningCalls: map[string]context.CancelFunc{},
 	}

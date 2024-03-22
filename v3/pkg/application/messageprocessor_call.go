@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -112,7 +111,7 @@ func (m *MessageProcessor) processCallMethod(method int, rw http.ResponseWriter,
 			var jsonResult = []byte("{}")
 			if result != nil {
 				// convert result to json
-				jsonResult, err = json.Marshal(result)
+				jsonResult, err = m.serializer(result)
 				if err != nil {
 					m.callErrorCallback(window, "Error converting result to json: %s", callID, err)
 					return

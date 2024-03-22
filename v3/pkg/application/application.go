@@ -76,7 +76,11 @@ func New(appOptions Options) *App {
 
 	result.Events = NewWailsEventProcessor(result.dispatchEventToWindows)
 
-	messageProc := NewMessageProcessor(result.Logger)
+	if result.options.MessageSerializer == nil {
+		result.options.MessageSerializer = DefaultSerializer()
+	}
+
+	messageProc := NewMessageProcessor(result.Logger, result.options.MessageSerializer)
 	opts := &assetserver.Options{
 		Handler: appOptions.Assets.Handler,
 		Middleware: assetserver.ChainMiddleware(
