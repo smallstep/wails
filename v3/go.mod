@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/pat v1.0.1
 	github.com/gorilla/sessions v1.2.1
+	github.com/gzuidhof/tygo v0.2.14
 	github.com/jackmordaunt/icns/v2 v2.2.1
 	github.com/jaypipes/ghw v0.12.0
 	github.com/leaanthony/clir v1.6.0
@@ -35,6 +36,7 @@ require (
 	github.com/tc-hib/winres v0.1.6
 	github.com/wailsapp/go-webview2 v1.0.9
 	github.com/wailsapp/mimetype v1.4.1
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	golang.org/x/sys v0.18.0
 	modernc.org/sqlite v1.21.0
 )
@@ -65,8 +67,6 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
-	github.com/gzuidhof/tygo v0.2.14 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
@@ -88,13 +88,10 @@ require (
 	github.com/sajari/fuzzy v1.0.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
-	github.com/spf13/cobra v1.3.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
@@ -120,3 +117,5 @@ require (
 	modernc.org/token v1.0.1 // indirect
 	mvdan.cc/sh/v3 v3.7.0 // indirect
 )
+
+replace github.com/gzuidhof/tygo v0.2.14 => github.com/smallstep/tygo v0.0.0-20240321223512-2e1427c7cf9a
