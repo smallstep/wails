@@ -113,7 +113,7 @@ func (p *Project) GenerateModels(models map[packagePath]map[structName]*StructDe
 					importPath = filepath.Join(importPathParts...)
 				}
 
-				imports[i.PackageName] = fmt.Sprintf("import * as %s from '%s';", i.PackageName, filepath.Join(importPath, "models.ts"))
+				imports[i.PackageName] = fmt.Sprintf("import * as %s from '%s';", i.PackageName, filepath.ToSlash(filepath.Join(importPath, "models.ts")))
 			}
 
 			if strings.HasPrefix(pkgInfo.Dir, p.Path) {
