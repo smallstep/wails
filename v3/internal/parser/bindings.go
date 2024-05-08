@@ -388,7 +388,7 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 			var models []string
 			var mainImports = ""
 			if len(methods) > 0 {
-				if useBundledRuntime {
+				if options.UseBundledRuntime {
 					mainImports = "import {Call} from '/wails/runtime.js';\n"
 				} else {
 					mainImports = "import {Call} from '@wailsio/runtime';\n"
@@ -423,7 +423,7 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 						sort.Strings(namespacedStructNames)
 						for _, thisStructName := range namespacedStructNames {
 							structInfo := namespacedStruct[thisStructName]
-							typedefs += " * @typedef {import('" + relativePackageDir + "/" + modelsFilename + "')." + thisStructName + "} " + namePrefix + structInfo.Name + "\n"
+							typedefs += " * @typedef {import('" + relativePackageDir + "/" + options.ModelsFilename + "')." + thisStructName + "} " + namePrefix + structInfo.Name + "\n"
 						}
 					}
 					typedefs += " */\n"
