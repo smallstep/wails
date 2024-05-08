@@ -21,7 +21,7 @@ const headerTypescript = `// Cynhyrchwyd y ffeil hon yn awtomatig. PEIDIWCH Â M
 `
 
 const bindingTemplate = `
-/**Comments 
+/**Comments
  * @function {{methodName}}* @param names {string}
  * @returns {Promise<string>}
  **/
@@ -354,7 +354,6 @@ func isContext(input *Parameter) bool {
 }
 
 func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod, options *flags.GenerateBindingsOptions) map[string]map[string]string {
-
 	var result = make(map[string]map[string]string)
 
 	// sort the bindings keys
@@ -389,7 +388,11 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 			var models []string
 			var mainImports = ""
 			if len(methods) > 0 {
-				mainImports = "import {Call} from '@wailsio/runtime';\n"
+				if useBundledRuntime {
+					mainImports = "import {Call} from '/wails/runtime.js';\n"
+				} else {
+					mainImports = "import {Call} from '@wailsio/runtime';\n"
+				}
 			}
 			for _, method := range methods {
 				if options.TS {
@@ -420,7 +423,7 @@ func (p *Project) GenerateBindings(bindings map[string]map[string][]*BoundMethod
 						sort.Strings(namespacedStructNames)
 						for _, thisStructName := range namespacedStructNames {
 							structInfo := namespacedStruct[thisStructName]
-							typedefs += " * @typedef {import('" + relativePackageDir + "/models')." + thisStructName + "} " + namePrefix + structInfo.Name + "\n"
+							typedefs += " * @typedef {import('" + relativePackageDir + "/" + modelsFilename + "')." + thisStructName + "} " + namePrefix + structInfo.Name + "\n"
 						}
 					}
 					typedefs += " */\n"

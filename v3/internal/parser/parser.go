@@ -361,7 +361,9 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 	if err != nil {
 		return p, err
 	}
+
 	p.outputDirectory = options.OutputDirectory
+
 	for _, pkg := range p.BoundMethods {
 		for _, boundMethods := range pkg {
 			p.Stats.NumMethods += len(boundMethods)
@@ -378,9 +380,11 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 		// Write the files
 		for structName, text := range structs {
 			p.Stats.NumStructs++
-			filename := structName + ".js"
+			var filename string
 			if options.TS {
 				filename = structName + ".ts"
+			} else {
+				filename = structName + ".js"
 			}
 			err = os.WriteFile(filepath.Join(outputDir, filename), []byte(text), 0o644)
 			if err != nil {
@@ -398,12 +402,20 @@ func GenerateBindingsAndModels(options *flags.GenerateBindingsOptions) (*Project
 		if err != nil {
 			return p, err
 		}
-		for pkg, text := range generatedModels {
-			// Get directory for package
-			pkgInfo := p.packageCache[pkg]
-			relativePackageDir := p.RelativeBindingsDir(pkgInfo, pkgInfo)
+		for pkgDir, text := range generatedModels {
 			// Write the directory
-			err = os.WriteFile(filepath.Join(options.OutputDirectory, relativePackageDir, pkg, options.ModelsFilename), []byte(text), 0644)
+			err = os.MkdirAll(filepath.Join(options.OutputDirectory, pkgDir), 0755)
+			if err != nil && !os.IsExist(err) {
+				return p, err
+			}
+			// Write the file
+			var filename string
+			if options.TS {
+				filename = options.ModelsFilename + ".ts"
+			} else {
+				filename = options.ModelsFilename + ".js"
+			}
+			err = os.WriteFile(filepath.Join(options.OutputDirectory, pkgDir, filename), []byte(text), 0644)
 		}
 		if err != nil {
 			return p, err
@@ -1209,25 +1221,35 @@ func (p *Project) parseTypes(pkgs map[string]*ParsedPackage) {
 }
 
 func (p *Project) RelativeBindingsDir(dir *ParsedPackage, dir2 *ParsedPackage) string {
-
 	if dir.Dir == dir2.Dir {
 		return "."
 	}
 
-	// Calculate the relative path from the bindings directory to the package directory
-	absoluteSourceDir := dir.Dir
-	if absoluteSourceDir == p.Path {
+	// Calculate the relative path from the bindings directory of dir to that of dir2
+	var (
+		absoluteSourceDir string
+		absoluteTargetDir string
+	)
+
+	if dir.Dir == p.Path {
 		absoluteSourceDir = filepath.Join(p.Path, p.outputDirectory, "main")
 	} else {
-		absoluteSourceDir = dir.Dir
+		relativeSourceDir := strings.TrimPrefix(dir.Dir, p.Path)
+		absoluteSourceDir = filepath.Join(p.Path, p.outputDirectory, relativeSourceDir)
 	}
-	targetRelativeDir := strings.TrimPrefix(dir2.Dir, p.Path)
-	targetBindingsDir := filepath.Join(p.Path, p.outputDirectory, targetRelativeDir)
-	// Calculate the relative path from the source directory to the target directory
-	relativePath, err := filepath.Rel(absoluteSourceDir, targetBindingsDir)
+
+	if dir2.Dir == p.Path {
+		absoluteTargetDir = filepath.Join(p.Path, p.outputDirectory, "main")
+	} else {
+		relativeTargetDir := strings.TrimPrefix(dir2.Dir, p.Path)
+		absoluteTargetDir = filepath.Join(p.Path, p.outputDirectory, relativeTargetDir)
+	}
+
+	relativePath, err := filepath.Rel(absoluteSourceDir, absoluteTargetDir)
 	if err != nil {
 		panic(err)
 	}
+
 	return filepath.ToSlash(relativePath)
 }
 

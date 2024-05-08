@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/wailsapp/wails/v3/internal/operatingsystem"
+
 	"github.com/pkg/browser"
 	"github.com/samber/lo"
 	"github.com/wailsapp/wails/v3/internal/signal"
@@ -30,7 +32,7 @@ var globalApplication *App
 
 // AlphaAssets is the default assets for the alpha application
 var AlphaAssets = AssetOptions{
-	Handler: AssetFileServerFS(alphaAssets),
+	Handler: BundledAssetFileServer(alphaAssets),
 }
 
 func init() {
@@ -74,7 +76,7 @@ func New(appOptions Options) *App {
 	result.logStartup()
 	result.logPlatformInfo()
 
-	result.Events = NewWailsEventProcessor(result.dispatchEventToWindows)
+	result.Events = NewWailsEventProcessor(result.dispatchEventToListeners)
 
 	if result.options.MessageSerializer == nil {
 		result.options.MessageSerializer = DefaultSerializer()
@@ -132,9 +134,12 @@ func New(appOptions Options) *App {
 	}
 
 	result.plugins = NewPluginManager(appOptions.Plugins, srv)
-	err = result.plugins.Init()
-	if err != nil {
-		globalApplication.fatal("Fatal error in plugins initialisation: " + err.Error())
+	errors := result.plugins.Init()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			globalApplication.error("Error initialising plugin: " + err.Error())
+		}
+		globalApplication.fatal("Fatal error in plugins initialisation")
 	}
 
 	err = result.bindings.AddPlugins(appOptions.Plugins)
@@ -325,9 +330,14 @@ type App struct {
 
 	// signalHandler is used to handle signals
 	signalHandler *signal.SignalHandler
+
+	// Wails Event Listener related
+	wailsEventListenerLock sync.Mutex
+	wailsEventListeners    []WailsEventListener
 }
 
 func (a *App) init() {
+	a.applicationEventHooks = make(map[uint][]*eventHook)
 	a.applicationEventListeners = make(map[uint][]*EventListener)
 	a.windows = make(map[uint]Window)
 	a.systemTrays = make(map[uint]*SystemTray)
@@ -335,6 +345,7 @@ func (a *App) init() {
 	a.keyBindings = make(map[string]func(window *WebviewWindow))
 	a.Logger = a.options.Logger
 	a.pid = os.Getpid()
+	a.wailsEventListeners = make([]WailsEventListener, 0)
 }
 
 func (a *App) getSystemTrayID() uint {
@@ -397,6 +408,12 @@ func (a *App) RegisterHook(eventType events.ApplicationEventType, callback func(
 		a.applicationEventHooks[eventID] = lo.Without(a.applicationEventHooks[eventID], thisHook)
 		a.applicationEventHooksLock.Unlock()
 	}
+}
+
+func (a *App) RegisterListener(listener WailsEventListener) {
+	a.wailsEventListenerLock.Lock()
+	a.wailsEventListeners = append(a.wailsEventListeners, listener)
+	a.wailsEventListenerLock.Unlock()
 }
 
 func (a *App) NewWebviewWindow() *WebviewWindow {
@@ -543,7 +560,12 @@ func (a *App) Run() error {
 		return err
 	}
 
-	a.plugins.Shutdown()
+	errors := a.plugins.Shutdown()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			a.error("Error shutting down plugin: " + err.Error())
+		}
+	}
 
 	return nil
 }
@@ -768,9 +790,15 @@ func SaveFileDialogWithOptions(s *SaveFileDialogOptions) *SaveFileDialogStruct {
 	return result
 }
 
-func (a *App) dispatchEventToWindows(event *WailsEvent) {
+func (a *App) dispatchEventToListeners(event *WailsEvent) {
+	listeners := a.wailsEventListeners
+
 	for _, window := range a.windows {
 		window.DispatchWailsEvent(event)
+	}
+
+	for _, listener := range listeners {
+		listener.DispatchWailsEvent(event)
 	}
 }
 
@@ -869,23 +897,6 @@ func (a *App) AssetServerHandler() func(rw http.ResponseWriter, req *http.Reques
 	return a.assets.ServeHTTP
 }
 
-func (a *App) RegisterWindow(window Window) uint {
-	id := getWindowID()
-	if a.windows == nil {
-		a.windows = make(map[uint]Window)
-	}
-	a.windowsLock.Lock()
-	defer a.windowsLock.Unlock()
-	a.windows[id] = window
-	return id
-}
-
-func (a *App) UnregisterWindow(id uint) {
-	a.windowsLock.Lock()
-	defer a.windowsLock.Unlock()
-	delete(a.windows, id)
-}
-
 func (a *App) BrowserOpenURL(url string) error {
 	return browser.OpenURL(url)
 }
@@ -895,11 +906,15 @@ func (a *App) BrowserOpenFile(path string) error {
 }
 
 func (a *App) Environment() EnvironmentInfo {
-	return EnvironmentInfo{
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
-		Debug: a.isDebugMode,
+	info, _ := operatingsystem.Info()
+	result := EnvironmentInfo{
+		OS:     runtime.GOOS,
+		Arch:   runtime.GOARCH,
+		Debug:  a.isDebugMode,
+		OSInfo: info,
 	}
+	result.PlatformInfo = a.platformEnvironment()
+	return result
 }
 
 func (a *App) shouldQuit() bool {

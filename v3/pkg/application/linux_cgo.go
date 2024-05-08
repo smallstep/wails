@@ -15,7 +15,7 @@ import (
 )
 
 /*
-#cgo linux pkg-config: gtk+-3.0 webkit2gtk-4.0  gdk-3.0
+#cgo linux pkg-config: gtk+-3.0 webkit2gtk-4.1  gdk-3.0
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
@@ -64,15 +64,8 @@ extern gboolean handleFocusEvent(GtkWidget*, GdkEvent*, uintptr_t);
 extern void handleLoadChanged(WebKitWebView*, WebKitLoadEvent, uintptr_t);
 void handleClick(void*);
 extern gboolean onButtonEvent(GtkWidget *widget, GdkEventButton *event, uintptr_t user_data);
-extern void onDragNDrop(
-   void         *target,
-   GdkDragContext* context,
-   gint         x,
-   gint         y,
-   gpointer     seldata,
-   guint        info,
-   guint        time,
-   gpointer     data);
+extern gboolean onMenuButtonEvent(GtkWidget *widget, GdkEventButton *event, uintptr_t user_data);
+extern void onUriList(char **extracted, gpointer data);
 extern gboolean onKeyPressEvent (GtkWidget *widget, GdkEventKey *event, uintptr_t user_data);
 extern void onProcessRequest(WebKitURISchemeRequest *request, uintptr_t user_data);
 extern void sendMessageToBackend(WebKitUserContentManager *contentManager, WebKitJavascriptResult *result, void *data);
@@ -209,6 +202,36 @@ static void install_signal_handlers() {
 static int GetNumScreens(){
     return 0;
 }
+
+static void on_data_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
+                      GtkSelectionData *selection_data, guint target_type, guint time,
+                      gpointer data)
+{
+    gint length = gtk_selection_data_get_length(selection_data);
+
+    if (length < 0)
+    {
+        g_print("DnD failed!\n");
+        gtk_drag_finish(context, FALSE, FALSE, time);
+    }
+
+    gchar *uri_data = (gchar *)gtk_selection_data_get_data(selection_data);
+    gchar **uri_list = g_uri_list_extract_uris(uri_data);
+
+    onUriList(uri_list, data);
+
+    g_strfreev(uri_list);
+    gtk_drag_finish(context, TRUE, TRUE, time);
+}
+
+// drag and drop tutorial: https://wiki.gnome.org/Newcomers/OldDragNDropTutorial
+static void enableDND(GtkWidget *widget, gpointer data)
+{
+    GtkTargetEntry *target = gtk_target_entry_new("text/uri-list", 0, 0);
+    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT | GTK_DEST_DEFAULT_DROP, target, 1, GDK_ACTION_COPY);
+
+    signal_connect(widget, "drag-data-received", on_data_received, data);
+}
 */
 import "C"
 
@@ -332,6 +355,12 @@ func appNew(name string) pointer {
 	return pointer(C.gtk_application_new(nameC, C.APPLICATION_DEFAULT_FLAGS))
 }
 
+func setProgramName(prgName string) {
+	cPrgName := C.CString(prgName)
+	defer C.free(unsafe.Pointer(cPrgName))
+	C.g_set_prgname(cPrgName)
+}
+
 func appRun(app pointer) error {
 	application := (*C.GApplication)(app)
 	//TODO: Only set this if we configure it to do so
@@ -355,6 +384,13 @@ func appDestroy(application pointer) {
 	C.g_application_quit((*C.GApplication)(application))
 }
 
+func (w *linuxWebviewWindow) contextMenuSignals(menu pointer) {
+	c := NewCalloc()
+	defer c.Free()
+	winID := unsafe.Pointer(uintptr(C.uint(w.parent.ID())))
+	C.signal_connect(unsafe.Pointer(menu), c.String("button-release-event"), C.onMenuButtonEvent, winID)
+}
+
 func (w *linuxWebviewWindow) contextMenuShow(menu pointer, data *ContextMenuData) {
 	geometry := C.GdkRectangle{
 		x: C.int(data.X),
@@ -370,6 +406,7 @@ func (w *linuxWebviewWindow) contextMenuShow(menu pointer, data *ContextMenuData
 		C.GDK_GRAVITY_NORTH_WEST,
 		(*C.GdkEvent)(&event),
 	)
+	w.ctxMenuOpened = true
 }
 
 func (a *linuxApp) getCurrentWindowID() uint {
@@ -408,6 +445,20 @@ func (a *linuxApp) showAllWindows() {
 	for _, window := range a.getWindows() {
 		C.gtk_window_present((*C.GtkWindow)(window))
 	}
+}
+
+func (a *linuxApp) setIcon(icon []byte) {
+	gbytes := C.g_bytes_new_static(C.gconstpointer(unsafe.Pointer(&icon[0])), C.ulong(len(icon)))
+	stream := C.g_memory_input_stream_new_from_bytes(gbytes)
+	var gerror *C.GError
+	pixbuf := C.gdk_pixbuf_new_from_stream(stream, nil, &gerror)
+	if gerror != nil {
+		a.parent.error("Failed to load application icon: " + C.GoString(gerror.message))
+		C.g_error_free(gerror)
+		return
+	}
+
+	a.icon = pointer(pixbuf)
 }
 
 // Clipboard
@@ -738,16 +789,10 @@ func (w *linuxWebviewWindow) close() {
 }
 
 func (w *linuxWebviewWindow) enableDND() {
-	id := w.parent.id
-	dnd := C.CString("text/uri-list")
-	defer C.free(unsafe.Pointer(dnd))
-	targetentry := C.gtk_target_entry_new(dnd, 0, C.guint(id))
-	defer C.gtk_target_entry_free(targetentry)
-	C.gtk_drag_dest_set((*C.GtkWidget)(w.webview), C.GTK_DEST_DEFAULT_DROP, targetentry, 1, C.GDK_ACTION_COPY)
-	event := C.CString("drag-data-received")
-	defer C.free(unsafe.Pointer(event))
-	windowId := C.uint(id)
-	C.signal_connect(unsafe.Pointer(w.webview), event, C.onDragNDrop, unsafe.Pointer(C.gpointer(&windowId)))
+	C.gtk_drag_dest_unset((*C.GtkWidget)(w.webview))
+
+	windowId := C.uint(w.parent.id)
+	C.enableDND((*C.GtkWidget)(w.vbox), C.gpointer(&windowId))
 }
 
 func (w *linuxWebviewWindow) execJS(js string) {
@@ -1021,6 +1066,10 @@ func (w *linuxWebviewWindow) setResizable(resizable bool) {
 	C.gtk_window_set_resizable(w.gtkWindow(), gtkBool(resizable))
 }
 
+func (w *linuxWebviewWindow) setDefaultSize(width int, height int) {
+	C.gtk_window_set_default_size(w.gtkWindow(), C.gint(width), C.gint(height))
+}
+
 func (w *linuxWebviewWindow) setBackgroundColour(colour RGBA) {
 	rgba := C.GdkRGBA{C.double(colour.Red) / 255.0, C.double(colour.Green) / 255.0, C.double(colour.Blue) / 255.0, C.double(colour.Alpha) / 255.0}
 	C.webkit_web_view_set_background_color((*C.WebKitWebView)(w.webview), &rgba)
@@ -1105,6 +1154,12 @@ func (w *linuxWebviewWindow) setTitle(title string) {
 		cTitle := C.CString(title)
 		C.gtk_window_set_title(w.gtkWindow(), cTitle)
 		C.free(unsafe.Pointer(cTitle))
+	}
+}
+
+func (w *linuxWebviewWindow) setIcon(icon pointer) {
+	if icon != nil {
+		C.gtk_window_set_icon(w.gtkWindow(), (*C.GdkPixbuf)(icon))
 	}
 }
 
@@ -1320,29 +1375,44 @@ func onButtonEvent(_ *C.GtkWidget, event *C.GdkEventButton, data C.uintptr_t) C.
 	return C.gboolean(0)
 }
 
-//export onDragNDrop
-func onDragNDrop(target unsafe.Pointer, context *C.GdkDragContext, x C.gint, y C.gint, seldata unsafe.Pointer, info C.guint, time C.guint, data unsafe.Pointer) {
-	var length C.gint
-	selection := unsafe.Pointer(C.gtk_selection_data_get_data_with_length((*C.GtkSelectionData)(seldata), &length))
-	extracted := C.g_uri_list_extract_uris((*C.char)(selection))
-	defer C.g_strfreev(extracted)
+//export onMenuButtonEvent
+func onMenuButtonEvent(_ *C.GtkWidget, event *C.GdkEventButton, data C.uintptr_t) C.gboolean {
+	// Constants (defined here to be easier to use with purego)
+	GdkButtonRelease := C.GDK_BUTTON_RELEASE // 7
 
-	uris := unsafe.Slice(
-		(**C.char)(unsafe.Pointer(extracted)),
-		int(length))
-
-	var filenames []string
-	for _, uri := range uris {
-		if uri == nil {
-			break
-		}
-		filenames = append(filenames, strings.TrimPrefix(C.GoString(uri), "file://"))
+	windowId := uint(C.uint(data))
+	window := globalApplication.getWindowForID(windowId)
+	if window == nil {
+		return C.gboolean(0)
 	}
+	lw, ok := (window.(*WebviewWindow).impl).(*linuxWebviewWindow)
+	if !ok {
+		return C.gboolean(0)
+	}
+
+	// prevent custom context menu from closing immediately
+	if event.button == 3 && int(event._type) == GdkButtonRelease && lw.ctxMenuOpened {
+		lw.ctxMenuOpened = false
+		return C.gboolean(1)
+	}
+
+	return C.gboolean(0)
+}
+
+//export onUriList
+func onUriList(extracted **C.char, data unsafe.Pointer) {
+	// Credit: https://groups.google.com/g/golang-nuts/c/bI17Bpck8K4/m/DVDa7EMtDAAJ
+	offset := unsafe.Sizeof(uintptr(0))
+	filenames := []string{}
+	for *extracted != nil {
+		filenames = append(filenames, strings.TrimPrefix(C.GoString(*extracted), "file://"))
+		extracted = (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(extracted)) + offset))
+	}
+
 	windowDragAndDropBuffer <- &dragAndDropMessage{
 		windowId:  uint(*((*C.uint)(data))),
 		filenames: filenames,
 	}
-	C.gtk_drag_finish(context, C.true, C.false, time)
 }
 
 //export onKeyPressEvent
@@ -1377,7 +1447,6 @@ func getKeyboardState(event *C.GdkEventKey) (string, bool) {
 	}
 	keyString, ok := VirtualKeyCodes[keyCode]
 	if !ok {
-		fmt.Println("Error Could not find key code: ", keyCode)
 		return "", false
 	}
 	acc.Key = keyString
@@ -1514,8 +1583,8 @@ func runChooserDialog(window pointer, allowMultiple, createFolders, showHidden b
 	selections := make(chan string)
 	// run this on the gtk thread
 	InvokeAsync(func() {
+		response := C.gtk_dialog_run((*C.GtkDialog)(fc))
 		go func() {
-			response := C.gtk_dialog_run((*C.GtkDialog)(fc))
 			if response == C.GTK_RESPONSE_ACCEPT {
 				filenames := C.gtk_file_chooser_get_filenames((*C.GtkFileChooser)(fc))
 				iter := filenames
@@ -1528,16 +1597,21 @@ func runChooserDialog(window pointer, allowMultiple, createFolders, showHidden b
 					}
 					count++
 				}
-				close(selections)
-				C.gtk_widget_destroy((*C.GtkWidget)(unsafe.Pointer(fc)))
 			}
 		}()
 	})
+	C.gtk_widget_destroy((*C.GtkWidget)(unsafe.Pointer(fc)))
 	return selections, nil
 }
 
 func runOpenFileDialog(dialog *OpenFileDialogStruct) (chan string, error) {
-	const GtkFileChooserActionOpen = C.GTK_FILE_CHOOSER_ACTION_OPEN
+	var action int
+
+	if dialog.canChooseDirectories {
+		action = C.GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER
+	} else {
+		action = C.GTK_FILE_CHOOSER_ACTION_OPEN
+	}
 
 	window := nilPointer
 	if dialog.window != nil {
@@ -1556,7 +1630,7 @@ func runOpenFileDialog(dialog *OpenFileDialogStruct) (chan string, error) {
 		dialog.showHiddenFiles,
 		dialog.directory,
 		dialog.title,
-		GtkFileChooserActionOpen,
+		action,
 		buttonText,
 		dialog.filters)
 }

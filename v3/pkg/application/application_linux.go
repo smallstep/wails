@@ -2,10 +2,19 @@
 
 package application
 
+/*
+	#include "gtk/gtk.h"
+	#include "webkit2/webkit2.h"
+	static guint get_compiled_gtk_major_version() { return GTK_MAJOR_VERSION; }
+	static guint get_compiled_gtk_minor_version() { return GTK_MINOR_VERSION; }
+	static guint get_compiled_gtk_micro_version() { return GTK_MICRO_VERSION; }
+	static guint get_compiled_webkit_major_version() { return WEBKIT_MAJOR_VERSION; }
+	static guint get_compiled_webkit_minor_version() { return WEBKIT_MINOR_VERSION; }
+	static guint get_compiled_webkit_micro_version() { return WEBKIT_MICRO_VERSION; }
+*/
 import "C"
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -32,6 +41,8 @@ type linuxApp struct {
 	windowMapLock sync.Mutex
 
 	theme string
+
+	icon pointer
 }
 
 func (a *linuxApp) GetFlags(options Options) map[string]any {
@@ -58,10 +69,6 @@ func (a *linuxApp) on(eventID uint) {
 	//C.registerApplicationEvent(l.application, C.uint(eventID))
 }
 
-func (a *linuxApp) setIcon(icon []byte) {
-	log.Println("linuxApp.setIcon", "not implemented")
-}
-
 func (a *linuxApp) name() string {
 	return appName()
 }
@@ -86,7 +93,7 @@ func (a *linuxApp) setApplicationMenu(menu *Menu) {
 func (a *linuxApp) run() error {
 
 	a.parent.On(events.Linux.ApplicationStartup, func(evt *Event) {
-		fmt.Println("events.Linux.ApplicationStartup received!")
+		// TODO: What should happen here?
 	})
 	a.setupCommonEvents()
 	a.monitorThemeChanges()
@@ -186,6 +193,11 @@ func newPlatformApp(parent *App) *linuxApp {
 		application: appNew(name),
 		windowMap:   map[windowPointer]uint{},
 	}
+
+	if parent.options.Linux.ProgramName != "" {
+		setProgramName(parent.options.Linux.ProgramName)
+	}
+
 	return app
 }
 
@@ -210,4 +222,34 @@ func processWindowEvent(windowID C.uint, eventID C.uint) {
 		WindowID: uint(windowID),
 		EventID:  uint(eventID),
 	}
+}
+
+func buildVersionString(major, minor, micro C.uint) string {
+	return fmt.Sprintf("%d.%d.%d", uint(major), uint(minor), uint(micro))
+}
+
+func (a *App) platformEnvironment() map[string]any {
+	result := map[string]any{}
+	result["gtk3-compiled"] = buildVersionString(
+		C.get_compiled_gtk_major_version(),
+		C.get_compiled_gtk_minor_version(),
+		C.get_compiled_gtk_micro_version(),
+	)
+	result["gtk3-runtime"] = buildVersionString(
+		C.gtk_get_major_version(),
+		C.gtk_get_minor_version(),
+		C.gtk_get_micro_version(),
+	)
+
+	result["webkit2gtk-compiled"] = buildVersionString(
+		C.get_compiled_webkit_major_version(),
+		C.get_compiled_webkit_minor_version(),
+		C.get_compiled_webkit_micro_version(),
+	)
+	result["webkit2gtk-runtime"] = buildVersionString(
+		C.webkit_get_major_version(),
+		C.webkit_get_minor_version(),
+		C.webkit_get_micro_version(),
+	)
+	return result
 }

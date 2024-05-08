@@ -25,6 +25,7 @@ type Window interface {
 	Focus()
 	ForceReload()
 	Fullscreen() Window
+	GetBorderSizes() *LRTB
 	GetScreen() (*Screen, error)
 	GetZoom() float64
 	HandleDragAndDropMessage(filenames []string)
@@ -34,6 +35,7 @@ type Window interface {
 	Hide() Window
 	ID() uint
 	Info(message string, args ...any)
+	IsFocused() bool
 	IsFullscreen() bool
 	IsMaximised() bool
 	IsMinimised() bool

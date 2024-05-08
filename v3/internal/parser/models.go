@@ -42,7 +42,7 @@ func (p *Project) GenerateModel(wr io.Writer, def *ModelDefinitions, options *fl
 
 	tmpl, err := template.New(templateName).ParseFS(templates, "templates/"+templateName)
 	if err != nil {
-		println("Unable to create class template: " + err.Error())
+		println("Unable to initialize model template: " + err.Error())
 		return err
 	}
 

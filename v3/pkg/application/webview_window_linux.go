@@ -20,20 +20,21 @@ type dragInfo struct {
 }
 
 type linuxWebviewWindow struct {
-	id           uint
-	application  pointer
-	window       pointer
-	webview      pointer
-	parent       *WebviewWindow
-	menubar      pointer
-	vbox         pointer
-	menu         *Menu
-	accels       pointer
-	lastWidth    int
-	lastHeight   int
-	drag         dragInfo
-	lastX, lastY int
-	gtkmenu      pointer
+	id            uint
+	application   pointer
+	window        pointer
+	webview       pointer
+	parent        *WebviewWindow
+	menubar       pointer
+	vbox          pointer
+	menu          *Menu
+	accels        pointer
+	lastWidth     int
+	lastHeight    int
+	drag          dragInfo
+	lastX, lastY  int
+	gtkmenu       pointer
+	ctxMenuOpened bool
 }
 
 var (
@@ -61,6 +62,9 @@ func (w *linuxWebviewWindow) openContextMenu(menu *Menu, data *ContextMenuData) 
 	}
 	if menu.impl == nil {
 		ctxMenu.update()
+
+		native := ctxMenu.menu.impl.(*linuxMenu).native
+		w.contextMenuSignals(native)
 	}
 
 	native := ctxMenu.menu.impl.(*linuxMenu).native
@@ -163,6 +167,10 @@ func (w *linuxWebviewWindow) setMinSize(width, height int) {
 	w.setMinMaxSize(width, height, w.parent.options.MaxWidth, w.parent.options.MaxHeight)
 }
 
+func (w *linuxWebviewWindow) getBorderSizes() *LRTB {
+	return &LRTB{}
+}
+
 func (w *linuxWebviewWindow) setMaxSize(width, height int) {
 	w.setMinMaxSize(w.parent.options.MinWidth, w.parent.options.MinHeight, width, height)
 }
@@ -216,6 +224,7 @@ func (w *linuxWebviewWindow) run() {
 		w.enableDND()
 	}
 	w.setTitle(w.parent.options.Title)
+	w.setIcon(app.icon)
 	w.setAlwaysOnTop(w.parent.options.AlwaysOnTop)
 	w.setResizable(!w.parent.options.DisableResize)
 	// only set min/max size if actually set
@@ -230,6 +239,7 @@ func (w *linuxWebviewWindow) run() {
 			w.parent.options.MaxHeight,
 		)
 	}
+	w.setDefaultSize(w.parent.options.Width, w.parent.options.Height)
 	w.setSize(w.parent.options.Width, w.parent.options.Height)
 	w.setZoom(w.parent.options.Zoom)
 	if w.parent.options.BackgroundType != BackgroundTypeSolid {
